@@ -14,21 +14,22 @@ intents = discord.Intents.default()
 intents.message_content = True
 intents.members = True
 
-bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)  # disable default help
+# Disable default help and set prefix
+bot = commands.Bot(command_prefix="!", intents=intents, help_command=None)
 
 
 # ================== Events ==================
 @bot.event
 async def on_ready():
-    print(f"✅ We are ready to go in as {bot.user.name}")
+    print(f"✅ Bot is online as {bot.user.name}")
 
 
 @bot.event
 async def on_member_join(member):
     try:
         await member.send(
-            f"👋 Welcome to **Royal Empire** @{member.name}! \n"
-            f"Need help? Type `!help` in the support channel."
+            f"👋 Welcome to **Royal Empire** @{member.name}!\n"
+            f"Need help? Ping Staff in Chat."
         )
     except discord.Forbidden:
         print(f"⚠️ Couldn't DM {member.name}")
@@ -87,7 +88,8 @@ async def custom_help(ctx):
         f"🔹 `!ban @user [reason]` → Ban a member\n"
         f"🔹 `!timeout @user <seconds>` → Timeout a member\n"
         f"🔹 `!clear <number>` → Clear messages\n"
-        f"🔹 `!lock` → (Admin only) Lock a channel\n\n"
+        f"🔹 `!lock` → Lock a channel (Admin only)\n"
+        f"🔹 `!unlock` → Unlock a channel (Admin only)\n\n"
         f"You can also take roles here: <#1396726703564525688>\n"
         f"Need help? Ping staff in <#1396801885322739743>"
     )
@@ -129,6 +131,15 @@ async def lock(ctx):
     overwrite.send_messages = False
     await ctx.channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
     await ctx.send("🔒 Channel has been locked (Admin only).")
+
+
+@bot.command()
+@commands.has_permissions(administrator=True)
+async def unlock(ctx):
+    overwrite = ctx.channel.overwrites_for(ctx.guild.default_role)
+    overwrite.send_messages = True
+    await ctx.channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
+    await ctx.send("🔓 Channel has been unlocked (Admin only).")
 
 
 # ================== Run Bot ==================
