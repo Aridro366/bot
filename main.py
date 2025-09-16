@@ -65,9 +65,8 @@ async def on_message(message):
 @bot.command(name="help")
 async def help_command(ctx):
     await ctx.send(
-        f"Hello {ctx.author.mention}! Welcome to the server \n"
-        f"You can take roles from https://discord.com/channels/1396670355422056609/1396726703564525688 \n"
-        f"And ping Staff in https://discord.com/channels/1396670355422056609/1396801885322739743 for further assistance"
+        f"Hello {ctx.author.mention}! Welcome to the server \n You can take roles from https://discord.com/channels/1396670355422056609/1396726703564525688 \n And ping Staff in https://discord.com/channels/1396670355422056609/1396801885322739743 for further assistance"
     )
+
 
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
