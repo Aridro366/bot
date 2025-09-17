@@ -108,22 +108,18 @@ async def on_message(message):
 # Unban command
 @bot.command()
 @commands.has_permissions(ban_members=True)
-async def unban(ctx, *, member: str):
-    """Unban a previously banned user"""
-    banned_users = await ctx.guild.bans()
-    member_name, member_discriminator = member.split("#")
-
-    for ban_entry in banned_users:
-        user = ban_entry.user
-        if (user.name, user.discriminator) == (member_name, member_discriminator):
-            await ctx.guild.unban(user)
-            await ctx.send(f"✅ Unbanned {user.mention}")
-            return
-
-    await ctx.send("❌ Could not find that user in the ban list.")
+async def unban(ctx, user_id: int):
+    """Unban a user using their ID"""
+    try:
+        user = await bot.fetch_user(user_id)
+        await ctx.guild.unban(user)
+        await ctx.send(f"✅ Unbanned {user.mention} (ID: {user.id})")
+    except Exception as e:
+        await ctx.send(f"❌ Failed to unban user with ID {user_id}. Error: {e}")
 
 
 
 # ====== RUN BOT ======
 bot.run("YOUR_BOT_TOKEN_HERE")
+
 
