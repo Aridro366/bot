@@ -265,6 +265,17 @@ async def play(ctx, url):
         await play_next(ctx, ctx.voice_client, ctx.guild.id)
     await ctx.send(f"Queued: {url}")
 
+ydl_opts = {
+    "format": "bestaudio",
+    "quiet": True,
+    "noplaylist": True,
+    "ignoreerrors": True,
+    "no_warnings": True,
+    "default_search": "ytsearch",
+    "user_agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                  "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
+}
+
 @bot.command()
 async def pause(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
@@ -305,3 +316,4 @@ async def queue_list(ctx):
 # ---------------- Run bot ----------------
 keep_alive()
 bot.run(TOKEN)
+
