@@ -327,4 +327,11 @@ async def lock(ctx):
         await ctx.send("🔒 Channel locked.")
     except Exception as e:
         logger.exception("Lock command failed")
+
         await ctx.send(f"Failed to lock channel: {e}")
+
+@bot.command()
+async def ping(ctx):
+    latency = bot.latency
+    latency_ms = round(latency * 1000)
+    await ctx.send(f"🏓 Pong! Latency: {latency_ms} ms")
