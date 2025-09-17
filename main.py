@@ -50,8 +50,8 @@ except Exception:
 
 # ---------------- Bad words list ----------------
 bad_words = [
-    "shit", "bullshit", "fuck", "fucking", "fucked", "damn", "bitch", "bitches",
-    "ass", "asshole", "crap", "dick", "dicks", "piss", "pissed", "hell",
+     "bullshit", "fuck", "fucking", "fucked", "damn", "bitch", "bitches",
+    "ass", "asshole", "crap", "dick", "dicks", "piss", "pissed", 
     "cock", "cocksucker", "cum", "naked", "nude", "slut", "whore", "fag",
     "faggot", "retard", "idiot", "stupid", "dumb", "moron", "loser", "bastard",
     "twat", "prick", "bloody", "bugger", "bollocks", "arse", "shithead",
@@ -61,12 +61,12 @@ bad_words = [
     "tits", "boobs", "clit", "pussy", "twat", "cumshot", "hardcore",
     "xxx", "fuckface", "shitfuck", "assface", "shitbag", "cunt", "slutty",
     "whorehouse", "cockhead", "nigger", "chink", "spic", "kike", "beaner",
-    "redneck", "hillbilly", "terrorist", "bomb", "kill", "murder", "weapon",
-    "gun", "knife", "hate", "racist", "extremist", "pedophile", "child abuse",
-    "scam", "phishing", "clickbait", "malware", "virus", "spyware", "hack",
-    "darkweb", "botnet", "free money", "win cash", "get rich", "visit this site",
-    "bit.ly", "tinyurl", "goo.gl", "http", "www", "click here", "join now",
-    "subscribe", "adult", "xxxvideos", "escort", "camgirl", "onlyfans"
+    "redneck", "hillbilly", "terrorist",
+   "extremist", "pedophile", 
+    "phishing", "clickbait", "malware",
+    "darkweb", "botnet", 
+     "tinyurl", 
+     "adult", "xxxvideos", "escort", "camgirl", "onlyfans"
 ]
 bad_patterns = [re.compile(re.escape(word), re.IGNORECASE) for word in bad_words]
 
@@ -355,4 +355,5 @@ async def resume(ctx):
 # ---------------- Run ----------------
 if __name__ == "__main__":
     keep_alive()
+
     bot.run(TOKEN)
