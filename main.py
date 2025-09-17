@@ -136,7 +136,8 @@ async def unban(ctx, user_id: int):
 
 
 # ====== RUN BOT ======
-bot.run("MTQxNzUyMDgwOTAyNjUyMzEzNg.GfQOIq.qv8yfjlz_IHexMXaCiOalpgGykS7CqNknlLv4k")
+bot.run("DISCORD_TOKEN")
+
 
 
 
