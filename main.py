@@ -109,10 +109,14 @@ async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
 
 @bot.command()
 @commands.has_permissions(moderate_members=True)
-async def timeout(ctx, member: discord.Member, seconds: int):
-    duration = discord.utils.utcnow() + discord.timedelta(seconds=seconds)
-    await member.timeout(duration)
-    await ctx.send(f"⏳ {member.mention} has been timed out for {seconds} seconds.")
+async def timeout(ctx, member: discord.Member, minutes: int, *, reason: str = "No reason provided"):
+    """Timeout a member for a given number of minutes."""
+    try:
+        duration = discord.utils.utcnow() + discord.timedelta(minutes=minutes)
+        await member.timeout(until=duration, reason=reason)
+        await ctx.send(f"⏳ {member.mention} has been timed out for {minutes} minute(s). Reason: {reason}")
+    except Exception as e:
+        await ctx.send(f"❌ Failed to timeout {member.mention}. Error: {e}")
 
 
 @bot.command()
@@ -142,4 +146,5 @@ async def unlock(ctx):
 
 # ================== Run Bot ==================
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+
 
