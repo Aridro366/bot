@@ -90,8 +90,6 @@ async def custom_help(ctx):
         f"🔹 `!clear <number>` → Clear messages\n"
         f"🔹 `!lock` → Lock a channel (Admin only)\n"
         f"🔹 `!unlock` → Unlock a channel (Admin only)\n\n"
-        f"You can also take roles here: <#1396726703564525688>\n"
-        f"Need help? Ping staff in <#1396801885322739743>"
     )
 
 
@@ -144,3 +142,4 @@ async def unlock(ctx):
 
 # ================== Run Bot ==================
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+
