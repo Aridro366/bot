@@ -21,7 +21,7 @@ async def help(ctx):
     embed = discord.Embed(title="📌 Help Menu", color=discord.Color.blue())
     embed.add_field(name="🔹 !kick @user [reason]", value="Kick a member", inline=False)
     embed.add_field(name="🔹 !ban @user [reason]", value="Ban a member", inline=False)
-    embed.add_field(name="🔹 !timeout @user <minutes> [reason]", value="Timeout a member", inline=False)
+    embed.add_field(name="🔹 !unban @user <minutes> [reason]", value="Unban a member", inline=False)
     embed.add_field(name="🔹 !clear <number>", value="Clear messages", inline=False)
     embed.add_field(name="🔹 !lock", value="Lock the channel (Admin only)", inline=False)
     embed.add_field(name="🔹 !unlock", value="Unlock the channel (Admin only)", inline=False)
@@ -42,18 +42,6 @@ async def kick(ctx, member: discord.Member, *, reason="No reason provided"):
 async def ban(ctx, member: discord.Member, *, reason="No reason provided"):
     await member.ban(reason=reason)
     await ctx.send(f"🔨 {member.mention} was banned. Reason: {reason}")
-
-
-# ====== TIMEOUT ======
-@bot.command()
-@commands.has_permissions(moderate_members=True)
-async def timeout(ctx, member: discord.Member, minutes: int, *, reason="No reason provided"):
-    try:
-        duration = discord.utils.utcnow() + timedelta(minutes=minutes)
-        await member.timeout(timed_out_until=duration, reason=reason)
-        await ctx.send(f"⏳ {member.mention} has been timed out for {minutes} minute(s). Reason: {reason}")
-    except Exception as e:
-        await ctx.send(f"❌ Failed to timeout {member.mention}. Error: {e}")
 
 
 # ====== CLEAR ======
@@ -117,6 +105,25 @@ async def on_message(message):
             return
     await bot.process_commands(message)
 
+# Unban command
+@bot.command()
+@commands.has_permissions(ban_members=True)
+async def unban(ctx, *, member: str):
+    """Unban a previously banned user"""
+    banned_users = await ctx.guild.bans()
+    member_name, member_discriminator = member.split("#")
+
+    for ban_entry in banned_users:
+        user = ban_entry.user
+        if (user.name, user.discriminator) == (member_name, member_discriminator):
+            await ctx.guild.unban(user)
+            await ctx.send(f"✅ Unbanned {user.mention}")
+            return
+
+    await ctx.send("❌ Could not find that user in the ban list.")
+
+
 
 # ====== RUN BOT ======
 bot.run("YOUR_BOT_TOKEN_HERE")
+
