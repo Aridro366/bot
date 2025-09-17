@@ -117,7 +117,7 @@ async def timeout(ctx, member: discord.Member, minutes: int, *, reason: str = "N
         await ctx.send(f"⏳ {member.mention} has been timed out for {minutes} minute(s). Reason: {reason}")
     except Exception as e:
         await ctx.send(f"❌ Failed to timeout {member.mention}. Error: {e}")
-
+        
 
 @bot.command()
 @commands.has_permissions(manage_messages=True)
@@ -146,5 +146,6 @@ async def unlock(ctx):
 
 # ================== Run Bot ==================
 bot.run(token, log_handler=handler, log_level=logging.DEBUG)
+
 
 
