@@ -25,6 +25,7 @@ async def help(ctx):
     embed.add_field(name="🔹 !clear <number>", value="Clear messages", inline=False)
     embed.add_field(name="🔹 !lock", value="Lock the channel (Admin only)", inline=False)
     embed.add_field(name="🔹 !unlock", value="Unlock the channel (Admin only)", inline=False)
+    embed.add_field(name="🔹 !timeout @user <min>", value="Timeout a member", inline=False)
     await ctx.send(embed=embed)
 
 
@@ -70,6 +71,21 @@ async def unlock(ctx):
     overwrite.send_messages = True
     await ctx.channel.set_permissions(ctx.guild.default_role, overwrite=overwrite)
     await ctx.send("🔓 Channel unlocked (Admin only)")
+
+
+# timeout
+from datetime import timedelta
+
+@bot.command()
+@commands.has_permissions(moderate_members=True)
+async def timeout(ctx, member: discord.Member, minutes: int, *, reason="No reason provided"):
+    """Timeout a member for given minutes (works on your discord.py version)."""
+    try:
+        until = discord.utils.utcnow() + timedelta(minutes=minutes)
+        await member.edit(communication_disabled_until=until, reason=reason)  # FIXED
+        await ctx.send(f"⏳ {member.mention} has been timed out for {minutes} minute(s). Reason: {reason}")
+    except Exception as e:
+        await ctx.send(f"❌ Failed to timeout {member.mention}. Error: {e}")
 
 
 # ====== BAD WORD FILTER ======
@@ -121,5 +137,6 @@ async def unban(ctx, user_id: int):
 
 # ====== RUN BOT ======
 bot.run("YOUR_BOT_TOKEN_HERE")
+
 
 
