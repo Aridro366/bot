@@ -276,6 +276,13 @@ ydl_opts = {
                   "(KHTML, like Gecko) Chrome/116.0.0.0 Safari/537.36"
 }
 
+    # Download & play audio
+    with yt_dlp.YoutubeDL(ydl_opts) as ydl:
+        info = ydl.extract_info(url, download=False)
+        url2 = info['url']
+
+    voice_client.play(discord.FFmpegPCMAudio(url2))
+
 @bot.command()
 async def pause(ctx):
     if ctx.voice_client and ctx.voice_client.is_playing():
@@ -316,4 +323,5 @@ async def queue_list(ctx):
 # ---------------- Run bot ----------------
 keep_alive()
 bot.run(TOKEN)
+
 
