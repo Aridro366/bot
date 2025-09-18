@@ -9,8 +9,19 @@ from discord import ui, Embed, Interaction
 from discord.ui import View, Button
 from discord import app_commands
 from discord import Embed, Color
+from flask import Flask
+import threading
 
+app = Flask("")
 
+@app.route("/")
+def home():
+    return "Bot is running!"
+
+def run():
+    app.run(host="0.0.0.0", port=10000)
+
+threading.Thread(target=run).start()
 
 # ---------------- Load environment ----------------
 load_dotenv()
@@ -419,4 +430,5 @@ async def warn_user(message, reason="Violation"):
             await message.channel.send(f"❌ Failed to timeout {user.mention}: {e}")
 
 # ---------------- Run Bot ----------------
+
 bot.run(TOKEN)
