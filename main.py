@@ -10,7 +10,21 @@ from discord.ui import View, Button
 from discord import app_commands
 from discord import Embed, Color
 
+from flask import Flask
+import threading
 
+app = Flask('')
+
+@app.route('/')
+def home():
+    return "Moderation Bot is alive!"
+
+def run():
+    app.run(host='0.0.0.0', port=8080)
+
+def keep_alive():
+    t = threading.Thread(target=run)
+    t.start()
 
 # ---------------- Load environment ----------------
 load_dotenv()
@@ -419,4 +433,5 @@ async def warn_user(message, reason="Violation"):
             await message.channel.send(f"❌ Failed to timeout {user.mention}: {e}")
 
 # ---------------- Run Bot ----------------
+
 bot.run(TOKEN)
