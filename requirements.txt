@@ -1,5 +1,0 @@
-discord.py
-flask
-Python-dotenv
-yt-dlp
-PyNacl
