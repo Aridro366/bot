@@ -11,6 +11,8 @@ load_dotenv()
 TOKEN = os.getenv("DISCORD_TOKEN")
 if not TOKEN:
     raise SystemExit("DISCORD_TOKEN not found in .env")
+    
+print("DISCORD_TOKEN loaded:", bool(os.getenv("DISCORD_TOKEN")))
 
 intents = discord.Intents.all()
 bot = commands.Bot(command_prefix="!", intents=intents)
@@ -72,5 +74,6 @@ async def help(ctx):
     embed = discord.Embed(title="Bot Help", description="Commands list:")
     embed.add_field(name="Moderation", value="kick, ban")
     await ctx.send(embed=embed)
+
 
 bot.run(TOKEN)
