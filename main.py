@@ -9,6 +9,7 @@ from dotenv import load_dotenv
 import os
 import itertools
 import asyncio
+from keep_alive import keep_alive
 
 load_dotenv()  # loads .env variables
 TOKEN = os.getenv("DISCORD_TOKEN")
@@ -23,7 +24,7 @@ guild_config = {}  # stores guild-specific settings like log channel
 
 # --- Bot Setup ---
 bot = commands.Bot(command_prefix="!", intents=intents)
-
+keep_alive()
 # --- Database setup ---
 conn = sqlite3.connect("botdata.db")
 c = conn.cursor()
@@ -543,4 +544,5 @@ async def setlogchannel_autocomplete(interaction: discord.Interaction, current: 
 
 # --- Run Bot ---
 bot.run(TOKEN)
+
 
