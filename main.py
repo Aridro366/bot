@@ -8,9 +8,12 @@ import random
 from dotenv import load_dotenv
 import os
 import itertools
+from keep_alive import _keep_alive
 
 load_dotenv()  # loads .env variables
 TOKEN = os.getenv("DISCORD_TOKEN")
+
+keep_alive()
 
 
 # --- Intents ---
@@ -385,4 +388,5 @@ async def on_ready():
 
 # --- Run Bot ---
 bot.run(TOKEN)
+
 
