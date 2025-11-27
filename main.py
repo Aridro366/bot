@@ -1,0 +1,501 @@
+import discord
+from discord.ext import commands, tasks
+from discord import app_commands, File
+from discord.ui import View, Button
+from datetime import datetime, timedelta
+import time
+import os
+import asyncio
+import random
+import aiohttp
+import io
+import pytz
+from dotenv import load_dotenv
+from keep_alive import keep_alive
+
+keep_alive()
+
+# -------------------- CONFIG --------------------
+intents = discord.Intents.default()
+intents.message_content = True
+intents.members = True
+
+
+# Local timezone
+local_tz = pytz.timezone("Asia/Kolkata")
+
+load_dotenv()
+TOKEN = os.getenv("TOKEN")
+PREFIX = "."
+OWNER_ID = 1314811739837038675
+GUILD_ID = 1443271947894128784
+LOG_CHANNEL_ID = 1443591110642499594
+MOD_LOG = 1443595332393897984
+SUPPORT_CHANNEL_ID = 1443442650673057894
+
+# Staff IDs
+STAFF_IDS = [1314811739837038675 , 
+             1303751390505734174
+        ]  # Add more IDs as needed
+
+# -------------------- BOT INIT --------------------
+bot = commands.Bot(command_prefix=PREFIX, intents=intents , help_command=None)
+
+# -------------------- AFK DATA --------------------
+afk_data = {}  # {guild_id: {user_id: {"reason": str, "time": float}}}
+
+def set_afk(guild_id, user_id, reason):
+    if guild_id not in afk_data:
+        afk_data[guild_id] = {}
+    afk_data[guild_id][user_id] = {
+        "reason": reason,
+        "time": time.time()
+    }
+
+def remove_afk(guild_id, user_id):
+    if guild_id in afk_data and user_id in afk_data[guild_id]:
+        del afk_data[guild_id][user_id]
+
+def is_afk(guild_id, user_id):
+    return guild_id in afk_data and user_id in afk_data[guild_id]
+
+def format_duration(seconds):
+    mins, secs = divmod(int(seconds), 60)
+    hours, mins = divmod(mins, 60)
+    parts = []
+    if hours > 0:
+        parts.append(f"{hours}h")
+    if mins > 0:
+        parts.append(f"{mins}m")
+    parts.append(f"{secs}s")
+    return " ".join(parts)
+
+# -------------------- EVENTS --------------------
+@bot.event
+async def on_ready():
+    print(f"Logged in as {bot.user}")
+    try:
+        await bot.tree.sync()
+        print("Slash commands synced.")
+    except Exception as e:
+        print(e)
+    bot.loop.create_task(rotate_status())
+    print("Status rotation started!")
+
+@bot.event
+async def on_message(message):
+    if message.author.bot:
+        return
+
+    guild_id = message.guild.id
+    user_id = message.author.id
+
+    # Remove AFK when user speaks
+    if is_afk(guild_id, user_id):
+        start_time = afk_data[guild_id][user_id]["time"]
+        reason = afk_data[guild_id][user_id]["reason"]
+        afk_seconds = time.time() - start_time
+        remove_afk(guild_id, user_id)
+        await message.channel.send(
+            f"🟢 **{message.author.display_name}** is back!\n"
+            f"⏱ AFK Duration: **{format_duration(afk_seconds)}**\n"
+            f"📌 Reason was: {reason}"
+        )
+
+    # Notify if mentioned someone AFK
+    if message.mentions:
+        for user in message.mentions:
+            if is_afk(guild_id, user.id):
+                data = afk_data[guild_id][user.id]
+                duration = format_duration(time.time() - data["time"])
+                await message.reply(
+                    f"⚠️ **{user.display_name}** is AFK!\n"
+                    f"📌 Reason: {data['reason']}\n"
+                    f"⏱ AFK for: **{duration}**"
+                )
+
+    # Respond to bot mentions
+    if bot.user in message.mentions:
+        try:
+            embed = discord.Embed(
+                title=f"Hello {message.author.name}! 👋",
+                color=discord.Color.blue(),
+                description=(
+                    "Welcome to our server! I am here to assist you with store operations.\n\n"
+                    "💡 **My Purpose:**\n"
+                    "- Provide receipts for purchases\n"
+                    "- Confirm payments\n"
+                    "- Automate store workflow and provide support\n\n"
+                    "If you encounter any issues, please create a ticket in the support channel, "
+                    "or our staff will assist you shortly."
+                )
+            )
+            support_channel = message.guild.get_channel(SUPPORT_CHANNEL_ID)
+            if support_channel:
+                embed.add_field(
+                    name="Support Channel",
+                    value=f"You can open a ticket here: {support_channel.mention}",
+                    inline=False
+                )
+            await message.channel.send(embed=embed)
+        except Exception as e:
+            await message.channel.send(f"❌ Error responding: {e}")
+
+    await bot.process_commands(message)
+
+# -------------------- STATUS ROTATION --------------------
+fun_texts = [
+    "Chilling 😎", "Protecting the server 🛡️", "Cooking some code 🍳",
+    "Watching over the members 👀", "Booting in the cloud ☁️",
+    "Debugging myself 🐞", "Serving chaos and order ⚖️",
+    "Online and active ⚡", "Running on Python 🐍"
+]
+
+async def rotate_status():
+    await bot.wait_until_ready()
+    while not bot.is_closed():
+        total_members = sum(g.member_count for g in bot.guilds)
+        await bot.change_presence(activity=discord.Game(name=f"Members: {total_members}"))
+        await asyncio.sleep(10)
+        random_text = random.choice(fun_texts)
+        await bot.change_presence(activity=discord.Game(name=random_text))
+        await asyncio.sleep(10)
+
+# -------------------- PREFIX COMMANDS --------------------
+@bot.command()
+async def afk(ctx, *, reason="AFK"):
+    set_afk(ctx.guild.id, ctx.author.id, reason)
+    await ctx.send(f"🟡 **{ctx.author.display_name}** is now AFK: {reason}")
+
+def staff_only(ctx):
+    return ctx.author.id in STAFF_IDS
+
+# Staff-only command example
+@bot.command()
+async def say(ctx, *, message):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    await ctx.message.delete()
+    await ctx.send(message)
+
+@bot.command()
+async def announce(ctx, *, message):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    embed = discord.Embed(
+        title="📢 Announcement",
+        description=message,
+        color=discord.Color.gold()
+    )
+    await ctx.send(embed=embed)
+
+# -------------------- SLASH COMMANDS --------------------
+@bot.tree.command(name="afk", description="Set your AFK status")
+async def slash_afk(interaction: discord.Interaction, reason: str = "AFK"):
+    set_afk(interaction.guild.id, interaction.user.id, reason)
+    await interaction.response.send_message(
+        f"🟡 **{interaction.user.display_name}** is now AFK: {reason}", ephemeral=False
+    )
+
+# Staff-only slash commands
+def staff_only_slash(interaction):
+    return interaction.user.id in STAFF_IDS
+
+@bot.tree.command(name="say", description="Make the bot say something")
+async def slash_say(interaction: discord.Interaction, message: str):
+    if not staff_only_slash(interaction):
+        return await interaction.response.send_message("❌ You are not allowed to use this command.", ephemeral=True)
+    await interaction.response.send_message(message)
+
+@bot.tree.command(name="announce", description="Send an announcement")
+async def slash_announce(interaction: discord.Interaction, message: str):
+    if not staff_only_slash(interaction):
+        return await interaction.response.send_message("❌ You are not allowed to use this command.", ephemeral=True)
+    embed = discord.Embed(title="📢 Announcement", description=message, color=discord.Color.gold())
+    await interaction.response.send_message(embed=embed)
+
+# -------------------- MODERATION COMMANDS --------------------
+@bot.command(name="ban")
+@commands.has_permissions(ban_members=True)
+async def ban(ctx, member: discord.Member, *, reason=None):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    try:
+        await member.ban(reason=reason)
+        await ctx.send(f"✅ {member.mention} has been banned.")
+        # Log mod action
+        await MOD_LOG(ctx, "Ban", member, reason)
+    except discord.Forbidden:
+        await ctx.send("❌ I do not have permission to ban this member.")
+    except discord.HTTPException:
+        await ctx.send("❌ Failed to ban member.")
+
+@bot.command(name="kick")
+@commands.has_permissions(kick_members=True)
+async def kick(ctx, member: discord.Member, *, reason=None):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    try:
+        await member.kick(reason=reason)
+        await ctx.send(f"✅ {member.mention} has been kicked.")
+        await MOD_LOG(ctx, "Kick", member, reason)
+    except discord.Forbidden:
+        await ctx.send("❌ I do not have permission to kick this member.")
+    except discord.HTTPException:
+        await ctx.send("❌ Failed to kick member.")
+
+@bot.command(name="timeout")
+@commands.has_permissions(moderate_members=True)
+async def timeout(ctx, member: discord.Member, minutes: int, *, reason=None):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    try:
+        duration = timedelta(minutes=minutes)
+        await member.edit(timed_out_until=discord.utils.utcnow() + duration, reason=reason)
+        await ctx.send(f"⏱️ {member.mention} has been timed out for {minutes} minutes.")
+        await MOD_LOG(ctx, "Timeout", member, reason, duration=minutes)
+    except discord.Forbidden:
+        await ctx.send("❌ I do not have permission to timeout this member.")
+    except discord.HTTPException:
+        await ctx.send("❌ Failed to timeout member.")
+
+@bot.command(name="unban")
+@commands.has_permissions(ban_members=True)
+async def unban(ctx, user_id: int, *, reason=None):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    try:
+        user = await bot.fetch_user(user_id)
+        await ctx.guild.unban(user, reason=reason)
+        await ctx.send(f"✅ {user} has been unbanned.")
+        await MOD_LOG(ctx, "Unban", user, reason)
+    except discord.NotFound:
+        await ctx.send(f"❌ User with ID {user_id} is not banned.")
+    except discord.Forbidden:
+        await ctx.send("❌ I do not have permission to unban this user.")
+    except discord.HTTPException:
+        await ctx.send("❌ Failed to unban user.")
+
+# -------------------- QR COMMANDS --------------------
+@bot.command(name="QR")
+async def qr_prefix(ctx, number: int):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    file_path = os.path.join("qrs", f"QR{number}.png")
+    if os.path.isfile(file_path):
+        await ctx.send(file=File(file_path))
+    else:
+        await ctx.send(f"❌ QR{number} not found!")
+
+@bot.tree.command(name="qr", description="Send your Paytm QR")
+@app_commands.describe(number="Which QR to send (1, 2, 3...)")
+async def slash_qr(interaction: discord.Interaction, number: int):
+    if not staff_only_slash(interaction):
+        return await interaction.response.send_message("❌ You are not allowed to use this command.", ephemeral=True)
+    file_path = os.path.join("qrs", f"QR{number}.png")
+    if os.path.isfile(file_path):
+        await interaction.response.send_message(file=File(file_path))
+    else:
+        await interaction.response.send_message(f"❌ QR{number} not found!", ephemeral=True)
+
+# -------------------- PAYMENT CONFIRMATION --------------------
+async def send_payment_confirmation(channel: discord.TextChannel, buyer: discord.Member):
+    embed = discord.Embed(
+        title="💰 Payment Confirmed!",
+        color=discord.Color.blue(),
+        timestamp=discord.utils.utcnow()
+    )
+    embed.add_field(
+        name="Order Status:",
+        value=(
+            "✅ Payment received\n\n"
+            "The order is placed. Please be patient — our staff will deliver the product soon.\n"
+            "❌ No need to ping our staff.\n\n"
+            "⏱️ If you do not get any response, you may ping after 3 hours."
+        ),
+        inline=False
+    )
+    embed.set_footer(text="— Royal Store Bot")
+    embed.set_thumbnail(url="https://cdn.discordapp.com/attachments/1443532706167394366/1443648455850594507/file_0000000083987209a5c2fc9ed6b956a4.png?ex=6929d5e5&is=69288465&hm=49467e5d26540322bd6967d0cda522bb09bdba41af7691878f6967df83bfe72b")
+    await channel.send(embed=embed)
+
+@bot.command(name="pp")
+async def pp_prefix(ctx, buyer: discord.Member = None):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+    buyer = buyer or ctx.author
+    await send_payment_confirmation(ctx.channel, buyer)
+
+@bot.tree.command(name="pp", description="Send payment confirmation for an order")
+@app_commands.describe(buyer="Buyer who made the payment")
+async def pp_slash(interaction: discord.Interaction, buyer: discord.Member = None):
+    if not staff_only_slash(interaction):
+        return await interaction.response.send_message("❌ You are not allowed to use this command.", ephemeral=True)
+    await interaction.response.send_message("✅ Payment confirmation sent.", ephemeral=True)
+    buyer = buyer or interaction.user
+    await send_payment_confirmation(interaction.channel, buyer)
+
+# -------------------- THANKS COMMANDS --------------------
+async def send_simple_thanks(channel: discord.TextChannel):
+    paragraph = (
+        "🎉 Thank you for your purchase! 🎉\n\n"
+        "We truly appreciate your support and hope you enjoy your item. "
+        "Your satisfaction is our priority, and our team is always here to help if you need any assistance. "
+        "We look forward to serving you again in the future! "
+    )
+    await channel.send(paragraph)
+
+@bot.command(name="thanks")
+async def thanks_prefix(ctx):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+    await send_simple_thanks(ctx.channel)
+
+@bot.tree.command(name="thanks", description="Send a thank-you message at the end")
+async def thanks_slash(interaction: discord.Interaction):
+    if not staff_only_slash(interaction):
+        return await interaction.response.send_message("❌ You are not allowed to use this command.", ephemeral=True)
+    await interaction.response.send_message("✅ Thanks message sent.", ephemeral=True)
+    await send_simple_thanks(interaction.channel)
+
+# -------------------- SERVER INFO --------------------
+@bot.command(name="server_info")
+async def server_info_cmd(ctx):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    guild = ctx.guild
+    embed = discord.Embed(title=f"Server Info: {guild.name}", color=discord.Color.blurple(), timestamp=datetime.utcnow())
+    embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+    embed.add_field(name="Server ID", value=guild.id, inline=False)
+    embed.add_field(name="Owner", value=guild.owner, inline=False)
+    embed.add_field(name="Members", value=guild.member_count, inline=False)
+    embed.add_field(name="Roles", value=len(guild.roles), inline=False)
+    embed.add_field(name="Channels", value=len(guild.channels), inline=False)
+    embed.add_field(name="Created On", value=guild.created_at.strftime("%d %b %Y %H:%M:%S"), inline=False)
+    await ctx.send(embed=embed)
+
+@bot.tree.command(name="server_info", description="Get detailed server info")
+async def server_info_slash(interaction: discord.Interaction):
+    if not staff_only_slash(interaction):
+        return await interaction.response.send_message("❌ You are not allowed to use this command.", ephemeral=True)
+    guild = interaction.guild
+    embed = discord.Embed(title=f"Server Info: {guild.name}", color=discord.Color.blurple(), timestamp=datetime.utcnow())
+    embed.set_thumbnail(url=guild.icon.url if guild.icon else discord.Embed.Empty)
+    embed.add_field(name="Server ID", value=guild.id, inline=False)
+    embed.add_field(name="Owner", value=guild.owner, inline=False)
+    embed.add_field(name="Members", value=guild.member_count, inline=False)
+    embed.add_field(name="Roles", value=len(guild.roles), inline=False)
+    embed.add_field(name="Channels", value=len(guild.channels), inline=False)
+    embed.add_field(name="Created On", value=guild.created_at.strftime("%d %b %Y %H:%M:%S"), inline=False)
+    await interaction.response.send_message(embed=embed)
+
+# -------------------- MEMBER INFO --------------------
+@bot.command(name="member_info")
+async def member_info_cmd(ctx, member: discord.Member = None):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    member = member or ctx.author
+    embed = discord.Embed(title=f"Member Info: {member}", color=discord.Color.green(), timestamp=datetime.utcnow())
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.add_field(name="ID", value=member.id, inline=False)
+    embed.add_field(name="Display Name", value=member.display_name, inline=False)
+    embed.add_field(name="Bot?", value=member.bot, inline=False)
+    embed.add_field(name="Top Role", value=member.top_role, inline=False)
+    embed.add_field(name="Joined Server", value=member.joined_at.strftime("%d %b %Y %H:%M:%S"), inline=False)
+    embed.add_field(name="Account Created", value=member.created_at.strftime("%d %b %Y %H:%M:%S"), inline=False)
+    await ctx.send(embed=embed)
+
+@bot.tree.command(name="member_info", description="Get detailed member info")
+@app_commands.describe(member="The member to get info for")
+async def member_info_slash(interaction: discord.Interaction, member: discord.Member = None):
+    if not staff_only_slash(interaction):
+        return await interaction.response.send_message("❌ You are not allowed to use this command.", ephemeral=True)
+    member = member or interaction.user
+    embed = discord.Embed(title=f"Member Info: {member}", color=discord.Color.green(), timestamp=datetime.utcnow())
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.add_field(name="ID", value=member.id, inline=False)
+    embed.add_field(name="Display Name", value=member.display_name, inline=False)
+    embed.add_field(name="Bot?", value=member.bot, inline=False)
+    embed.add_field(name="Top Role", value=member.top_role, inline=False)
+    embed.add_field(name="Joined Server", value=member.joined_at.strftime("%d %b %Y %H:%M:%S"), inline=False)
+    embed.add_field(name="Account Created", value=member.created_at.strftime("%d %b %Y %H:%M:%S"), inline=False)
+    await interaction.response.send_message(embed=embed)
+
+# -------------------- DETAILED INFO --------------------
+@bot.command(name="detailed_info")
+async def detailed_info_cmd(ctx, member: discord.Member = None):
+    if not staff_only(ctx):
+        return await ctx.send("❌ You are not allowed to use this command.")
+    member = member or ctx.author
+    guild = ctx.guild
+    embed = discord.Embed(title=f"Detailed Info: {member}", color=discord.Color.purple(), timestamp=datetime.utcnow())
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.add_field(name="ID", value=member.id, inline=True)
+    embed.add_field(name="Display Name", value=member.display_name, inline=True)
+    embed.add_field(name="Bot?", value=member.bot, inline=True)
+    embed.add_field(name="Top Role", value=member.top_role, inline=True)
+    embed.add_field(name="Joined Server", value=member.joined_at.strftime("%d %b %Y %H:%M:%S"), inline=True)
+    embed.add_field(name="Account Created", value=member.created_at.strftime("%d %b %Y %H:%M:%S"), inline=True)
+    embed.add_field(name="Server Name", value=guild.name, inline=True)
+    embed.add_field(name="Server ID", value=guild.id, inline=True)
+    embed.add_field(name="Total Members", value=guild.member_count, inline=True)
+    await ctx.send(embed=embed)
+
+@bot.tree.command(name="detailed_info", description="Get detailed info about a member + server")
+@app_commands.describe(member="The member to get detailed info for")
+async def detailed_info_slash(interaction: discord.Interaction, member: discord.Member = None):
+    if not staff_only_slash(interaction):
+        return await interaction.response.send_message("❌ You are not allowed to use this command.", ephemeral=True)
+    member = member or interaction.user
+    guild = interaction.guild
+    embed = discord.Embed(title=f"Detailed Info: {member}", color=discord.Color.purple(), timestamp=datetime.utcnow())
+    embed.set_thumbnail(url=member.display_avatar.url)
+    embed.add_field(name="ID", value=member.id, inline=True)
+    embed.add_field(name="Display Name", value=member.display_name, inline=True)
+    embed.add_field(name="Bot?", value=member.bot, inline=True)
+    embed.add_field(name="Top Role", value=member.top_role, inline=True)
+    embed.add_field(name="Joined Server", value=member.joined_at.strftime("%d %b %Y %H:%M:%S"), inline=True)
+    embed.add_field(name="Account Created", value=member.created_at.strftime("%d %b %Y %H:%M:%S"), inline=True)
+    embed.add_field(name="Server Name", value=guild.name, inline=True)
+    embed.add_field(name="Server ID", value=guild.id, inline=True)
+    embed.add_field(name="Total Members", value=guild.member_count, inline=True)
+    await interaction.response.send_message(embed=embed)
+
+
+@bot.command(name="purge")
+async def purge_prefix(ctx, amount: int):
+    # Check if user is staff
+    if ctx.author.id not in STAFF_IDS:
+        return await ctx.send("❌ You are not allowed to use this command.", delete_after=5)
+
+    # Validate amount
+    if amount <= 0:
+        return await ctx.send("❌ Please provide a number greater than 0.", delete_after=5)
+
+    # Delete the command message first
+    try:
+        await ctx.message.delete()
+    except:
+        pass
+
+    # Purge messages
+    deleted = await ctx.channel.purge(limit=amount)
+    confirmation = await ctx.send(f"✅ Deleted {len(deleted)} messages.")
+    await confirmation.delete(delay=5)  # auto-delete confirmation
+
+# -------------------- RUN BOT --------------------
+ALLOWED_GUILDS = [GUILD_ID]
+@bot.event
+async def on_guild_join(guild):
+    if guild.id not in ALLOWED_GUILDS:
+        await guild.leave()
+
+bot.run(TOKEN)
