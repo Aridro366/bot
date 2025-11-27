@@ -491,6 +491,63 @@ async def purge_prefix(ctx, amount: int):
     confirmation = await ctx.send(f"✅ Deleted {len(deleted)} messages.")
     await confirmation.delete(delay=5)  # auto-delete confirmation
 
+@bot.tree.command(
+    name="give_receipt", 
+    description="Give a purchase receipt to a member as a TXT file and log it"
+)
+@app_commands.describe(
+    member="Member who purchased", 
+    item="Purchased item", 
+    price="Price"
+)
+async def give_receipt_slash(interaction: discord.Interaction, member: discord.Member, item: str, price: str):
+    # Staff check
+    if interaction.user.id not in STAFF_IDS:
+        return await interaction.response.send_message("❌ You are not allowed to use this command.", ephemeral=True)
+
+    # Generate receipt
+    receipt_id = random.randint(1000, 9999)
+    time_now = datetime.utcnow().astimezone(local_tz).strftime("%d %b %Y %H:%M:%S")
+    receipt_text = (
+        f"--- PURCHASE RECEIPT ---\n\n"
+        f"Member: {member.name}#{member.discriminator}\n"
+        f"Item: {item}\n"
+        f"Price: {price}\n"
+        f"Receipt ID: {receipt_id}\n"
+        f"Issued by: {interaction.user.name}#{interaction.user.discriminator}\n"
+        f"Time: {time_now}\n"
+        f"------------------------"
+    )
+    file = discord.File(io.StringIO(receipt_text), filename=f"receipt_{receipt_id}.txt")
+
+    # Send receipt to buyer DM
+    try:
+        await member.send(content="🧾 Here is your purchase receipt:", file=file)
+        dm_status = "✅ Receipt sent to buyer DMs."
+    except Exception:
+        dm_status = "❌ Could not send receipt DM (buyer may have DMs disabled)."
+
+    # Log in staff channel
+    guild = bot.get_guild(GUILD_ID)
+    log_channel = guild.get_channel(LOG_CHANNEL_ID)
+    if log_channel:
+        embed = discord.Embed(
+            title="🛒 Purchase Logged",
+            color=discord.Color.gold(),
+            timestamp=datetime.utcnow()
+        )
+        embed.add_field(name="Buyer", value=member.mention, inline=True)
+        embed.add_field(name="Item", value=item, inline=True)
+        embed.add_field(name="Price", value=price, inline=True)
+        embed.add_field(name="Receipt ID", value=receipt_id, inline=True)
+        embed.add_field(name="Issued by", value=interaction.user.mention, inline=True)
+        embed.add_field(name="Time", value=time_now, inline=True)
+        embed.set_footer(text="Store Bot")
+        await log_channel.send(embed=embed)
+
+    # Confirm in command (ephemeral)
+    await interaction.response.send_message(f"Receipt created for {member.mention}. {dm_status}", ephemeral=True)
+
 # -------------------- RUN BOT --------------------
 ALLOWED_GUILDS = [GUILD_ID]
 @bot.event
@@ -499,3 +556,4 @@ async def on_guild_join(guild):
         await guild.leave()
 
 bot.run(TOKEN)
+
