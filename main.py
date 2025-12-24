@@ -882,18 +882,6 @@ async def timeout(ctx, member: discord.Member, minutes: int, *, reason="No reaso
 
 
 @bot.command()
-@commands.has_permissions(manage_messages=True)
-async def warn(ctx, member: discord.Member, *, reason="No reason provided"):
-    await try_dm(
-        member,
-        f"⚠️ You were **WARNED** in **{ctx.guild.name}**\n📄 Reason: {reason}"
-    )
-
-    await ctx.send(f"⚠️ {member.mention} warned.")
-    await send_mod_log(ctx.guild, "Warn", ctx.author, member, reason)
-
-
-@bot.command()
 @commands.has_permissions(ban_members=True)
 async def unban(ctx, user_id: int, *, reason="No reason provided"):
     try:
@@ -1036,6 +1024,7 @@ async def on_guild_join(guild):
         await guild.leave()
 
 bot.run(TOKEN)
+
 
 
 
