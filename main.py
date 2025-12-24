@@ -916,99 +916,7 @@ async def on_command_error(ctx, error):
         await ctx.send("❌ Invalid argument.", ephemeral=True)
     else:
         print(error)
-
-
-
-# AUTO MOD _------------------------
-
-MOD_LOG_CHANNEL_ID = 123456789012345678  # mod-log channel
-SPAM_TIME_WINDOW = 5        # seconds
-SPAM_MSG_LIMIT = 5          # messages
-MAX_EMOJIS = 6
-MAX_MENTIONS = 5
-CAPS_PERCENTAGE = 70        # % of caps to trigger
-LINK_WHITELIST = []
-
-
-
-async def automod_log(guild, user, action, reason, channel):
-    log_channel = guild.get_channel(MOD_LOG_CHANNEL_ID)
-    if not log_channel:
-        return
-
-    embed = discord.Embed(
-        title="🛡 AutoMod Action",
-        color=discord.Color.orange(),
-        timestamp=discord.utils.utcnow()
-    )
-    embed.add_field(name="User", value=f"{user} ({user.id})", inline=False)
-    embed.add_field(name="Channel", value=channel.mention, inline=False)
-    embed.add_field(name="Action", value=action, inline=False)
-    embed.add_field(name="Reason", value=reason, inline=False)
-
-    await log_channel.send(embed=embed)
-
-@bot.event
-async def on_message(message):
-    if message.author.bot or not message.guild:
-        return
-
-    author = message.author
-    content = message.content
-    channel = message.channel
-    now = time.time()
-
-    # ================= LINK BLOCKER =================
-    if re.search(r"https?://", content):
-        if not any(domain in content for domain in LINK_WHITELIST):
-            await message.delete()
-            await try_dm(author, "🔗 Links are not allowed in this server.")
-            await automod_log(message.guild, author, "Message Deleted", "Unauthorized link", channel)
-            return
-
-    # ================= MENTION SPAM =================
-    if len(message.mentions) >= MAX_MENTIONS:
-        await message.delete()
-        await try_dm(author, f"🚫 Too many mentions ({len(message.mentions)}).")
-        await automod_log(message.guild, author, "Message Deleted", "Mention spam", channel)
-        return
-
-    # ================= EMOJI SPAM =================
-    emoji_count = len(re.findall(r"<a?:\w+:\d+>|[\U00010000-\U0010ffff]", content))
-    if emoji_count >= MAX_EMOJIS:
-        await message.delete()
-        await try_dm(author, f"😀 Too many emojis ({emoji_count}).")
-        await automod_log(message.guild, author, "Message Deleted", "Emoji spam", channel)
-        return
-
-    # ================= CAPS SPAM =================
-    letters = [c for c in content if c.isalpha()]
-    if len(letters) > 5:
-        caps = sum(1 for c in letters if c.isupper())
-        percent = (caps / len(letters)) * 100
-        if percent >= CAPS_PERCENTAGE:
-            await message.delete()
-            await try_dm(author, "🔠 Please don’t use excessive caps.")
-            await automod_log(message.guild, author, "Message Deleted", "Caps spam", channel)
-            return
-
-    # ================= MESSAGE SPAM =================
-    user_message_cache[author.id].append(now)
-    user_message_cache[author.id] = [
-        t for t in user_message_cache[author.id]
-        if now - t <= SPAM_TIME_WINDOW
-    ]
-
-    if len(user_message_cache[author.id]) >= SPAM_MSG_LIMIT:
-        await message.delete()
-        await try_dm(author, "🚫 Please stop spamming messages.")
-        await automod_log(message.guild, author, "Message Deleted", "Message spam", channel)
-        return
-
-    await bot.process_commands(message)
-
-
-
+# PAYMENT ___________________________________________________________________________________________________
 
 UPI_ID = "bossakhil53@okicici"
 PAYEE_NAME = "Royal Store"
@@ -1128,6 +1036,7 @@ async def on_guild_join(guild):
         await guild.leave()
 
 bot.run(TOKEN)
+
 
 
 
