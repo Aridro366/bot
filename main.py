@@ -31,7 +31,7 @@ local_tz = pytz.timezone("Asia/Kolkata")
 
 load_dotenv()
 TOKEN = os.getenv("TOKEN")
-PREFIX = "="
+PREFIX = "."
 OWNER_ID = 1314811739837038675
 GUILD_ID = 1443271947894128784
 SCRIPT_LOG_ID_CHANNEL= 1443591110642499594
@@ -1128,4 +1128,5 @@ async def on_guild_join(guild):
         await guild.leave()
 
 bot.run(TOKEN)
+
 
