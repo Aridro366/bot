@@ -3,4 +3,5 @@ discord.py
 aiohttp
 pytz
 flask
-qrcode
+
+qrcode[pil]
